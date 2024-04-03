@@ -343,7 +343,11 @@ let makeConfigTemplate = async (shadowTemplate, fullPathgml, dir, misc) => {
     ? misc.parallelism
     : res.general.parallelism
   if (!res.experimental) res.experimental = new Object()
-  res.experimental.use_legacy_working_dir = true
+  // Marker MN
+  // legacy_working_dir is no longer supported
+  // res.experimental.use_legacy_working_dir = true
+  // instead, we use the template directory to create a shared folder for all replicas and clients (definition could be moved to the .env file)
+  res.general.template_directory = '/home/bft/promo/tool/libhotstuff/template_shadow'
   res.experimental.runahead = misc.runahead
   res.network = new Object()
   res.network.graph = { type: 'gml', file: { path: fullPathgml } }
@@ -356,9 +360,14 @@ let makeHost = (res, name, ip, network_node_id, procs) => {
   for (let i = 0; i < procs.length; i++) {
     let procsObj = {
       path: procs[i].path,
-      environment: procs[i].env,
+      // Marker MN
+      // The format for the environment variable changed but since HotStuff didn't appear to need them I simply removed them (Sorry, first time I'm using Java Script so I didn't invest any further time here).
+      // environment: procs[i].env,
       args: procs[i].args,
       start_time: procs[i].startTime,
+      // Marker MN
+      // added the expected final state of the process, so shadow doesn't complain that the experiment falied
+      expected_final_state: procs[i].expected_final_state,
     }
     if (procs[i].stopTime) procsObj['stop_time'] = procs[i].stopTime
     processes.push(procsObj)

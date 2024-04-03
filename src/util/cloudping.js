@@ -45,7 +45,9 @@ const fs = require('fs')
 
 // cloudping daily averages api endpoint
 
-const mapPath = '/home/cb/tool/src/util/aws21.json'
+// Marker MN
+// I guess this should be moved to .env file ;-)
+const mapPath = '/home/bft/promo/tool/src/util/aws21.json'
 
 function getLatencies(log) {
     let latencies = new Object()

@@ -141,6 +141,9 @@ async function passArgs(hosts, replicaSettings, clientSettings, log) {
           startTime: clientSettings.startTime
             ? clientSettings.startTime
             : '0 s',
+            // Marker MN
+            // added the expected final state of the process
+            expected_final_state: 'running',
         })
         log.debug(
           `client ${clientIndex} added on host: ${clientHostIndex} with path: ${
@@ -155,7 +158,10 @@ async function passArgs(hosts, replicaSettings, clientSettings, log) {
       continue
     }
     let conf = path.join(
-      process.env.HOTSTUFF_GENSCRIPT_WORKING_DIR,
+    // Marker MN
+    // since the working directory is no longer central in the tool, I utilise the shadow template function to copy the configuration files in a template folder into the experint result folder. So each process navigates two folders above
+      '../..',
+      // process.env.HOTSTUFF_GENSCRIPT_WORKING_DIR,
       `hotstuff.gen-sec${replicaIndex}.conf`,
     )
     hosts[i].procs = []
@@ -164,6 +170,9 @@ async function passArgs(hosts, replicaSettings, clientSettings, log) {
       env: '',
       args: `--conf ${conf}` + pacemakerString,
       startTime: 0,
+      // Marker MN
+      // added the expected final state of the process
+      expected_final_state: 'running',
     })
     log.debug(
       `replica ${replicaIndex} added on host: ${replicaIndex} with path: ${
@@ -176,7 +185,9 @@ async function passArgs(hosts, replicaSettings, clientSettings, log) {
   }
   return hosts
 }
-async function copyConfig(log) {
+// Marker MN
+// the config files are copied to the shadow template folder which mirrors the folder structure of each host/client so each has the config files in their local execution folder
+async function copyConfig(hosts, log) {
   const destDir = path.join(process.env.HOTSTUFF_DIR, 'hotstuff.conf')
   const sourceDir = path.join(
     process.env.HOTSTUFF_GENSCRIPT_WORKING_DIR,
@@ -190,6 +201,35 @@ async function copyConfig(log) {
     log,
   )
   log.debug(`copied config!`)
+  
+  let replicaIndex = 0
+  let clientIndex = 0
+  for (let i = 0; i < hosts.length; i++) {
+    if (hosts[i].isClient) {
+      await promisified_spawn(
+       'cp',
+       [destDir, path.join(process.env.HOTSTUFF_DIR, 'template_shadow/hosts/hotstuffclient' + clientIndex.toString() + '/hotstuff.conf')],
+       process.env.HOTSTUFF_DIR,
+       log
+     )
+     clientIndex++
+     continue;
+    }
+    
+    await promisified_spawn(
+      'cp',
+      [destDir, path.join(process.env.HOTSTUFF_DIR, 'template_shadow/hosts/hotstuffreplica' + replicaIndex.toString() + '/hotstuff.conf')],
+      process.env.HOTSTUFF_DIR,
+      log
+    )
+    await promisified_spawn(
+      'cp',
+      [path.join(process.env.HOTSTUFF_DIR, 'scripts/deploy/hotstuff.gen-sec' + replicaIndex.toString() + '.conf'), path.join(process.env.HOTSTUFF_DIR, 'template_shadow/hotstuff.gen-sec' + replicaIndex.toString() + '.conf')],
+      process.env.HOTSTUFF_DIR,
+      log,
+    )
+    replicaIndex++
+  }
 }
 
 async function getStats(experimentId, log) {
@@ -272,7 +312,8 @@ async function configure(replicaSettings, clientSettings, log) {
   await writeHosts(hostIPs, log)
   await genArtifacts(replicaSettings.blockSize, log)
   let hosts = await passArgs(hostIPs, replicaSettings, clientSettings, log)
-  await copyConfig(log)
+  // Marker MN added hostIPs as argument so I can copy each configuration file to the indivdual hotstuff client/replica execution folder
+  await copyConfig(hostIPs, log)
   return hosts
 }
 function getExecutionDir() {

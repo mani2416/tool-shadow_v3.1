@@ -7,10 +7,10 @@ function promisified_spawn(cmd, args, workingDir, log) {
     const process = spawn(cmd, args, { cwd: workingDir })
     process.on('exit', function (code) {
       if (code) {
-        log.error('child proess terminated with code: ' + code)
+        log.error('child process terminated with code: ' + code)
         reject(code)
       }
-      log.info('child proess terminated with code: ' + code)
+      log.info('child process terminated with code: ' + code)
       resolve(code)
     })
     process.on('close', function (code) {
